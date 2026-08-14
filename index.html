@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Edit</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --border: #e2e4e9;
+    --text: #1c1e26;
+    --text-soft: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ---------- Layout ---------- */
+  .app {
+    display: flex;
+    height: 100vh;
+  }
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    overflow-y: auto;
+  }
+  .stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background:
+      linear-gradient(45deg, #ebedf0 25%, transparent 25%, transparent 75%, #ebedf0 75%),
+      linear-gradient(45deg, #ebedf0 25%, transparent 25%, transparent 75%, #ebedf0 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+    background-color: #f0f1f4;
+    overflow: hidden;
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--accent); }
+  .tagline {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 4px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-soft);
+    margin-bottom: 10px;
+  }
+
+  /* ---------- Upload ---------- */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 22px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: #eff4ff;
+  }
+  .dropzone strong { color: var(--text); display: block; margin-bottom: 2px; }
+  .filename {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 8px;
+    word-break: break-all;
+    display: none;
+  }
+
+  /* ---------- Inputs ---------- */
+  .frame-inputs {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .field { flex: 1; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-bottom: 4px;
+  }
+  .field input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; padding: 12px; font-size: 14px; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-secondary { background: #eef0f4; color: var(--text); }
+  .btn-secondary:hover:not(:disabled) { background: #e2e5ec; }
+  .btn-ghost { background: #eef0f4; color: var(--text); flex: 1; padding: 8px 0; font-size: 12px; }
+  .btn-ghost:hover:not(:disabled) { background: #e2e5ec; }
+  .btn-row { display: flex; gap: 8px; }
+  .link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .link-btn:hover { color: var(--accent-hover); text-decoration: underline; }
+  .title-dot { color: var(--text-soft); margin: 0 4px; }
+
+  /* ---------- Zoom ---------- */
+  .zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .zoom-val {
+    font-size: 12px;
+    color: var(--text-soft);
+    min-width: 44px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.6;
+    background: #f7f8fa;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .downloads { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .btn-png { width: 100%; padding: 12px; font-size: 14px; }
+
+  /* ---------- Canvas ---------- */
+  #frameWrap {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06);
+    background: #fff;
+    display: none;
+    line-height: 0;
+  }
+  #previewCanvas {
+    touch-action: none;
+    cursor: grab;
+  }
+  #previewCanvas.dragging { cursor: grabbing; }
+  .stage-empty {
+    color: var(--text-soft);
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.7;
+    max-width: 320px;
+  }
+  .stage-empty svg { margin-bottom: 12px; opacity: 0.5; }
+  .frame-badge {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(28,30,38,0.78);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Desktop-only disclaimer ---------- */
+  #desktopOnly {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--bg);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+  }
+  #desktopOnly .box h1 { font-size: 22px; margin: 16px 0 8px; letter-spacing: -0.02em; }
+  #desktopOnly .box p { color: var(--text-soft); font-size: 14px; line-height: 1.6; }
+  @media (max-width: 1023px) {
+    #desktopOnly { display: flex; }
+    .app { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Small-screen disclaimer -->
+<div id="desktopOnly">
+  <div class="box">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+    <h1>Accessible only on a desktop</h1>
+    <p>Please open this page on a desktop computer</p>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <div class="logo">Image <span>Edit</span></div>
+      <div class="tagline">Crop &amp; frame images, download in full quality</div>
+    </div>
+
+    <div>
+      <div class="section-title">Image</div>
+      <div class="dropzone" id="dropzone">
+        <strong>Click to upload</strong>
+        or drag &amp; drop here<br>JPG or PNG
+      </div>
+      <div class="filename" id="filename"></div>
+      <input type="file" id="fileInput" accept="image/jpeg,image/png" hidden>
+    </div>
+
+    <div>
+      <div class="section-title">Frame size (px)<span class="title-dot">·</span><button class="link-btn" id="preferredFrame" type="button">Preferred Frame</button></div>
+      <div class="frame-inputs">
+        <div class="field">
+          <label for="frameW">Width</label>
+          <input type="number" id="frameW" value="500" min="1" max="10000">
+        </div>
+        <div class="field">
+          <label for="frameH">Height</label>
+          <input type="number" id="frameH" value="750" min="1" max="10000">
+        </div>
+        <button class="btn-secondary" id="applySize">Apply</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Zoom &amp; position</div>
+      <div class="zoom-row">
+        <input type="range" id="zoomSlider" min="0" max="1000" value="500" disabled>
+        <span class="zoom-val" id="zoomVal">–</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-ghost" id="btnFit" disabled>Fit</button>
+        <button class="btn-ghost" id="btnFill" disabled>Fill</button>
+        <button class="btn-ghost" id="btnCenter" disabled>Center</button>
+      </div>
+    </div>
+
+    <div class="hint">
+      <b>Drag</b> the image to move it<br>
+      <b>Scroll</b> on the image to zoom<br>
+      Blank space is exported as white
+    </div>
+
+    <div class="downloads">
+      <button class="btn-primary" id="btnJpg" disabled>Download JPG</button>
+      <button class="btn-secondary btn-png" id="btnPng" disabled>Download PNG (lossless)</button>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="frame-badge" id="frameBadge"></div>
+    <div class="stage-empty" id="stageEmpty">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <br>Upload a JPG or PNG to get started.<br>Your image never leaves this browser.
+    </div>
+    <div id="frameWrap">
+      <canvas id="previewCanvas"></canvas>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- State ----------
+  let img = null;            // HTMLImageElement (original, full resolution)
+  let originalName = "image";
+  let frameW = 500, frameH = 750;
+  let scale = 1;             // image scale relative to natural size
+  let px = 0, py = 0;        // top-left of scaled image, in frame coordinates
+  let displayScale = 1;      // frame px -> screen px
+  let minScale = 0.01, maxScale = 8;
+
+  // ---------- Elements ----------
+  const stage = document.getElementById("stage");
+  const stageEmpty = document.getElementById("stageEmpty");
+  const frameWrap = document.getElementById("frameWrap");
+  const frameBadge = document.getElementById("frameBadge");
+  const canvas = document.getElementById("previewCanvas");
+  const ctx = canvas.getContext("2d");
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("fileInput");
+  const filenameEl = document.getElementById("filename");
+  const frameWInput = document.getElementById("frameW");
+  const frameHInput = document.getElementById("frameH");
+  const applySizeBtn = document.getElementById("applySize");
+  const zoomSlider = document.getElementById("zoomSlider");
+  const zoomVal = document.getElementById("zoomVal");
+  const btnFit = document.getElementById("btnFit");
+  const btnFill = document.getElementById("btnFill");
+  const btnCenter = document.getElementById("btnCenter");
+  const btnJpg = document.getElementById("btnJpg");
+  const btnPng = document.getElementById("btnPng");
+
+  // ---------- Helpers ----------
+  function fitScaleOf() { return Math.min(frameW / img.naturalWidth, frameH / img.naturalHeight); }
+  function fillScaleOf() { return Math.max(frameW / img.naturalWidth, frameH / img.naturalHeight); }
+
+  function centerImage() {
+    px = (frameW - img.naturalWidth * scale) / 2;
+    py = (frameH - img.naturalHeight * scale) / 2;
+  }
+
+  function updateScaleBounds() {
+    minScale = Math.min(fitScaleOf(), 1) / 10;
+    maxScale = Math.max(fillScaleOf() * 8, 4);
+  }
+
+  function scaleToSlider(s) {
+    return Math.round(1000 * Math.log(s / minScale) / Math.log(maxScale / minScale));
+  }
+  function sliderToScale(v) {
+    return minScale * Math.pow(maxScale / minScale, v / 1000);
+  }
+
+  function syncZoomUI() {
+    zoomSlider.value = Math.max(0, Math.min(1000, scaleToSlider(scale)));
+    zoomVal.textContent = Math.round(scale * 100) + "%";
+  }
+
+  function layoutFrame() {
+    const pad = 56;
+    const availW = stage.clientWidth - pad;
+    const availH = stage.clientHeight - pad;
+    displayScale = Math.min(1, availW / frameW, availH / frameH);
+    canvas.style.width = (frameW * displayScale) + "px";
+    canvas.style.height = (frameH * displayScale) + "px";
+    frameBadge.textContent = frameW + " × " + frameH + " px";
+  }
+
+  function render() {
+    if (!img) return;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, frameW, frameH);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, px, py, img.naturalWidth * scale, img.naturalHeight * scale);
+  }
+
+  function setFrame(w, h) {
+    frameW = w; frameH = h;
+    canvas.width = frameW;
+    canvas.height = frameH;
+    layoutFrame();
+    if (img) {
+      updateScaleBounds();
+      scale = fitScaleOf();
+      centerImage();
+      syncZoomUI();
+      render();
+    }
+  }
+
+  function setControlsEnabled(on) {
+    [zoomSlider, btnFit, btnFill, btnCenter, btnJpg, btnPng].forEach(el => el.disabled = !on);
+  }
+
+  // ---------- Loading ----------
+  function loadFile(file) {
+    if (!file) return;
+    if (!/^image\/(jpeg|png)$/.test(file.type)) {
+      alert("Please choose a JPG or PNG image.");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = function () {
+      img = image;
+      originalName = file.name.replace(/\.[^.]+$/, "") || "image";
+      filenameEl.textContent = file.name + " — " + img.naturalWidth + " × " + img.naturalHeight + " px";
+      filenameEl.style.display = "block";
+      stageEmpty.style.display = "none";
+      frameWrap.style.display = "block";
+      frameBadge.style.display = "block";
+      setControlsEnabled(true);
+      setFrame(frameW, frameH);
+    };
+    image.onerror = function () {
+      URL.revokeObjectURL(url);
+      alert("Could not load that image. Please try another file.");
+    };
+    image.src = url;
+  }
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => { loadFile(fileInput.files[0]); fileInput.value = ""; });
+
+  ["dragover", "dragenter"].forEach(ev =>
+    document.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add("dragover"); }));
+  ["dragleave", "dragend"].forEach(ev =>
+    document.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove("dragover"); }));
+  document.addEventListener("drop", e => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    if (e.dataTransfer.files && e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+  });
+
+  // ---------- Frame size ----------
+  function applyFrameSize() {
+    const w = parseInt(frameWInput.value, 10);
+    const h = parseInt(frameHInput.value, 10);
+    if (!w || !h || w < 1 || h < 1 || w > 10000 || h > 10000) {
+      alert("Please enter a frame size between 1 and 10000 pixels.");
+      return;
+    }
+    setFrame(w, h);
+  }
+  applySizeBtn.addEventListener("click", applyFrameSize);
+  document.getElementById("preferredFrame").addEventListener("click", () => {
+    frameWInput.value = 500;
+    frameHInput.value = 750;
+    setFrame(500, 750);
+  });
+  [frameWInput, frameHInput].forEach(el =>
+    el.addEventListener("keydown", e => { if (e.key === "Enter") applyFrameSize(); }));
+
+  // ---------- Zoom & position ----------
+  function zoomAround(cx, cy, newScale) {
+    newScale = Math.max(minScale, Math.min(maxScale, newScale));
+    const ix = (cx - px) / scale;
+    const iy = (cy - py) / scale;
+    scale = newScale;
+    px = cx - ix * scale;
+    py = cy - iy * scale;
+    syncZoomUI();
+    render();
+  }
+
+  zoomSlider.addEventListener("input", () => {
+    zoomAround(frameW / 2, frameH / 2, sliderToScale(+zoomSlider.value));
+  });
+
+  btnFit.addEventListener("click", () => {
+    scale = fitScaleOf(); centerImage(); syncZoomUI(); render();
+  });
+  btnFill.addEventListener("click", () => {
+    scale = fillScaleOf(); centerImage(); syncZoomUI(); render();
+  });
+  btnCenter.addEventListener("click", () => {
+    centerImage(); render();
+  });
+
+  canvas.addEventListener("wheel", e => {
+    if (!img) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) / displayScale;
+    const cy = (e.clientY - rect.top) / displayScale;
+    const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+    zoomAround(cx, cy, scale * factor);
+  }, { passive: false });
+
+  let dragging = false, lastX = 0, lastY = 0;
+  canvas.addEventListener("pointerdown", e => {
+    if (!img) return;
+    dragging = true;
+    lastX = e.clientX; lastY = e.clientY;
+    canvas.classList.add("dragging");
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    px += (e.clientX - lastX) / displayScale;
+    py += (e.clientY - lastY) / displayScale;
+    lastX = e.clientX; lastY = e.clientY;
+    render();
+  });
+  canvas.addEventListener("pointerup", e => {
+    dragging = false;
+    canvas.classList.remove("dragging");
+    canvas.releasePointerCapture(e.pointerId);
+  });
+
+  window.addEventListener("resize", () => { layoutFrame(); });
+
+  // ---------- Export ----------
+  // High-quality downscale: halve the image in steps before the final draw, so
+  // large photos don't lose detail to the browser's single-pass resampling.
+  function resampleForScale(image, targetScale) {
+    let src = image;
+    let w = image.naturalWidth, h = image.naturalHeight;
+    let curScale = 1;
+    while (targetScale / curScale < 0.5) {
+      const nw = Math.max(1, Math.round(w / 2));
+      const nh = Math.max(1, Math.round(h / 2));
+      const c = document.createElement("canvas");
+      c.width = nw; c.height = nh;
+      const cc = c.getContext("2d");
+      cc.imageSmoothingEnabled = true;
+      cc.imageSmoothingQuality = "high";
+      cc.drawImage(src, 0, 0, nw, nh);
+      src = c; w = nw; h = nh;
+      curScale = w / image.naturalWidth;
+    }
+    return { src: src, factor: w / image.naturalWidth };
+  }
+
+  function buildExportCanvas() {
+    const out = document.createElement("canvas");
+    out.width = frameW;
+    out.height = frameH;
+    const octx = out.getContext("2d");
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, frameW, frameH);
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = "high";
+    const dw = img.naturalWidth * scale;
+    const dh = img.naturalHeight * scale;
+    if (scale < 0.5) {
+      const r = resampleForScale(img, scale);
+      octx.drawImage(r.src, px, py, dw, dh);
+    } else {
+      octx.drawImage(img, px, py, dw, dh);
+    }
+    return out;
+  }
+
+  function download(type, ext, quality) {
+    if (!img) return;
+    const out = buildExportCanvas();
+    out.toBlob(function (blob) {
+      if (!blob) { alert("Export failed. Please try again."); return; }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = originalName + "-" + frameW + "x" + frameH + "." + ext;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }, type, quality);
+  }
+
+  btnJpg.addEventListener("click", () => download("image/jpeg", "jpg", 1.0));
+  btnPng.addEventListener("click", () => download("image/png", "png"));
+
+  // ---------- Init ----------
+  setFrame(500, 750);
+})();
+</script>
+</body>
+</html>
