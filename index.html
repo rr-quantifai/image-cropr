@@ -129,14 +129,9 @@
     font-weight: 600;
     color: var(--text-soft);
     pointer-events: none;
-    transition: opacity .1s;
   }
-  /* Hide the native spinner until hover/focus; the W/H marker swaps out for it */
-  .size-field input::-webkit-inner-spin-button { opacity: 0; }
-  .size-field:hover input::-webkit-inner-spin-button,
-  .size-field input:focus::-webkit-inner-spin-button { opacity: 1; }
-  .size-field:hover .size-label,
-  .size-field:focus-within .size-label { opacity: 0; }
+  .size-field input::-webkit-inner-spin-button { display: none; }
+  .size-field input { -moz-appearance: textfield; appearance: textfield; }
 
   button {
     font-family: inherit;
@@ -309,12 +304,12 @@
     <div class="hint">
       <b>Drag</b> the image to move it<br>
       <b>Scroll</b> on the image to zoom<br>
-      Blank space is exported as white
+      Whitespace is exported as is
     </div>
 
     <div class="downloads">
       <button class="btn-primary" id="btnJpg">Download JPG</button>
-      <button class="btn-secondary btn-png" id="btnPng">Download PNG (lossless)</button>
+      <button class="btn-secondary btn-png" id="btnPng">Download PNG</button>
     </div>
   </aside>
 
